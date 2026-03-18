@@ -54,6 +54,10 @@ TELEGRAM_BOT_TOKEN=
 
 # WhatsApp（可选）国际格式逗号分隔: +8613800138000,+8613900139000
 WHATSAPP_ALLOW_FROM=
+
+# Trello（可选）获取方式: https://trello.com/app-key
+TRELLO_API_KEY=
+TRELLO_TOKEN=
 EOF
     chmod 600 "$ENV_FILE"
     echo -e "\n${YELLOW}  .env 已生成，请填写后重新运行：\n    vim $ENV_FILE${NC}\n"
@@ -74,6 +78,8 @@ EOF
   [ -z "$BRAVE_SEARCH_API_KEY" ] && warn "BRAVE_SEARCH_API_KEY 未填，Brave Search 将被禁用"
   [ -z "$TELEGRAM_BOT_TOKEN" ]   && warn "TELEGRAM_BOT_TOKEN 未填，telegram 节点将被移除"
   [ -z "$WHATSAPP_ALLOW_FROM" ]  && warn "WHATSAPP_ALLOW_FROM 未填，whatsapp 节点将被移除"
+  [ -z "$TRELLO_API_KEY" ]       && warn "TRELLO_API_KEY 未填，Trello skill 将不可用"
+  [ -z "$TRELLO_TOKEN" ]         && warn "TRELLO_TOKEN 未填，Trello skill 将不可用"
   success ".env 校验完成"
 }
 
@@ -102,9 +108,10 @@ deploy_config() {
   curl -fsSL "${GITHUB_RAW}/openclaw.json" -o "$DST" || error "下载失败"
 
   python3 - "$DST" "$OPENCLAW_DIR" "$LLM_PROVIDER_ID" "$LLM_MODEL_ID" \
-    "$BRAVE_SEARCH_API_KEY" "$BROWSER_PATH" "$TELEGRAM_BOT_TOKEN" "$WHATSAPP_ALLOW_FROM" <<'PYEOF'
+    "$BRAVE_SEARCH_API_KEY" "$BROWSER_PATH" "$TELEGRAM_BOT_TOKEN" "$WHATSAPP_ALLOW_FROM" \
+    "$TRELLO_API_KEY" "$TRELLO_TOKEN" <<'PYEOF'
 import json, sys
-dst, odir, pid, mid, brave, browser, telegram, whatsapp = sys.argv[1:]
+dst, odir, pid, mid, brave, browser, telegram, whatsapp, trello_key, trello_token = sys.argv[1:]
 full = pid + '/' + mid
 
 with open(dst) as f: c = f.read()
@@ -148,6 +155,17 @@ if not browser:
     try: c['browser'].pop('executablePath', None)
     except KeyError: pass
 
+# Trello skill
+skills_entries = c.setdefault('skills', {}).setdefault('entries', {})
+trello_cfg = skills_entries.get('trello', {})
+if trello_key and trello_token:
+    trello_cfg.setdefault('env', {})['TRELLO_API_KEY'] = trello_key
+    trello_cfg['env']['TRELLO_TOKEN'] = trello_token
+    trello_cfg['enabled'] = True
+else:
+    trello_cfg['enabled'] = False
+skills_entries['trello'] = trello_cfg
+
 with open(dst, 'w') as f: json.dump(c, f, indent=2, ensure_ascii=False)
 PYEOF
 
@@ -171,7 +189,31 @@ deploy_workspace() {
   done
 }
 
-# ── 5. 添加 agents（已存在则跳过）─────────────────────────
+# ── 5. 安装 skill 依赖 ──────────────────────────────────
+install_skill_deps() {
+  info "检查 skill 依赖..."
+
+  # Trello skill 需要 jq
+  if [ -n "$TRELLO_API_KEY" ] && [ -n "$TRELLO_TOKEN" ]; then
+    if ! command -v jq &>/dev/null; then
+      info "安装 jq（Trello skill 依赖）..."
+      if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y jq
+      elif command -v brew &>/dev/null; then
+        brew install jq
+      elif command -v yum &>/dev/null; then
+        sudo yum install -y jq
+      else
+        warn "无法自动安装 jq，请手动安装"
+      fi
+    fi
+    command -v jq &>/dev/null && success "jq 已就绪" || warn "jq 未安装，Trello skill 可能不可用"
+  fi
+
+  success "skill 依赖检查完成"
+}
+
+# ── 6. 添加 agents（已存在则跳过）─────────────────────────
 setup_agents() {
   command -v openclaw &>/dev/null || { warn "openclaw 未找到，跳过 agents 配置"; return; }
 
@@ -200,7 +242,7 @@ setup_agents() {
   done
 }
 
-# ── 6. 重启 gateway 并验证 ──────────────────────────────
+# ── 7. 重启 gateway 并验证 ──────────────────────────────
 verify() {
   command -v openclaw &>/dev/null || { warn "openclaw 未找到，请重新加载 shell"; return; }
   info "运行 doctor --fix..."
@@ -223,6 +265,7 @@ load_env
 install_openclaw
 deploy_config
 deploy_workspace
+install_skill_deps
 setup_agents
 verify
 
