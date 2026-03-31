@@ -103,17 +103,12 @@
     },
     "feishu": {
       "enabled": true,
-      "appId": "${FEISHU_APP_ID}",
-      "appSecret": "${FEISHU_APP_SECRET}",
-      "domain": "feishu",
-      "connectionMode": "websocket",
-      "requireMention": true,
-      "mediaMaxMb": 30,
-      "renderMode": "auto",
-      "tools": {
-        "perm": true
-      },
-      "stream": false
+      "accounts": {
+        "default": {
+          "appId": "${FEISHU_APP_ID}",
+          "appSecret": "${FEISHU_APP_SECRET}"
+        }
+      }
     }
   },
   "browser": {
