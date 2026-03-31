@@ -45,7 +45,7 @@ BROWSER_PATH=
 # Brave Search（可选）
 BRAVE_SEARCH_API_KEY=
 
-# Feishu / Lark（必填）
+# Feishu / Lark（可选）
 FEISHU_APP_ID=
 FEISHU_APP_SECRET=
 
