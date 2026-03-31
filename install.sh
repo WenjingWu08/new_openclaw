@@ -3,7 +3,7 @@ set -e
 
 # 用法: curl -fsSL https://raw.githubusercontent.com/ken196502/utm-ubuntu-openclaw-config/refs/heads/master/install.sh | bash
 
-GITHUB_RAW="https://raw.githubusercontent.com/ken196502/utm-ubuntu-openclaw-config/refs/heads/master"
+GITHUB_RAW="https://raw.githubusercontent.com/WenjingWu08/new_openclaw/refs/heads/master"
 OPENCLAW_DIR="$HOME/.openclaw"
 
 # 允许 .env 中的 OPENCLAW_DIR 覆盖默认值
@@ -78,6 +78,8 @@ EOF
   [ -z "$BRAVE_SEARCH_API_KEY" ] && warn "BRAVE_SEARCH_API_KEY 未填，Brave Search 将被禁用"
   [ -z "$TELEGRAM_BOT_TOKEN" ]   && warn "TELEGRAM_BOT_TOKEN 未填，telegram 节点将被移除"
   [ -z "$WHATSAPP_ALLOW_FROM" ]  && warn "WHATSAPP_ALLOW_FROM 未填，whatsapp 节点将被移除"
+  [ -z "$FEISHU_APP_ID" ]        && warn "FEISHU_APP_ID 未填，飞书集成将被禁用"
+  [ -z "$FEISHU_APP_SECRET" ]    && warn "FEISHU_APP_SECRET 未填，飞书集成将被禁用"
   [ -z "$TRELLO_API_KEY" ]       && warn "TRELLO_API_KEY 未填，Trello skill 将不可用"
   [ -z "$TRELLO_TOKEN" ]         && warn "TRELLO_TOKEN 未填，Trello skill 将不可用"
   success ".env 校验完成"
